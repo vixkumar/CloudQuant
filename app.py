@@ -1,5 +1,7 @@
+# pyrefly: ignore [missing-import]
 import streamlit as st
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import plotly.graph_objects as go
 from datetime import datetime
 
@@ -7,14 +9,30 @@ from database import init_db, reset_db, DEFAULT_DB_PATH
 from market_data import SUPPORTED_SYMBOLS, fetch_market_data
 from strategy import evaluate_crossover_strategy
 from trading_engine import TradingEngine
+from auth import is_authenticated, render_login_page, logout
 
-# Streamlit Page Config
+# Streamlit Page Config — must be the first Streamlit call
 st.set_page_config(
     page_title="CloudQuant | Minimal-Cost Paper Trading App",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# =============================================================================
+# AUTHENTICATION GUARD
+# Every line of code below this block is only reached by authenticated users.
+# render_login_page() always ends with st.stop(), so unauthenticated visitors
+# never see portfolio data, market data, or trading controls.
+# =============================================================================
+if not is_authenticated():
+    render_login_page()
+    # render_login_page() calls st.stop() — execution never continues here
+    # for unauthenticated users.
+
+# =============================================================================
+# AUTHENTICATED SECTION — all content below requires a valid session
+# =============================================================================
 
 # Initialize Database safely on start
 init_db()
@@ -51,7 +69,13 @@ st.markdown("""
 with st.sidebar:
     st.title("📈 CloudQuant")
     st.caption("FT-III Cloud Computing Demo Project")
-    
+
+    # Logout button — clears session state and redirects to login page
+    st.markdown("---")
+    if st.button("🚪 Logout", type="secondary", use_container_width=True):
+        logout()
+        st.rerun()
+
     st.markdown("---")
     st.subheader("Market Configuration")
     selected_symbol = st.selectbox("Select Equity", SUPPORTED_SYMBOLS, index=0)
